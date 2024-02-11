@@ -18,23 +18,17 @@ const readCsv = (fileName) => {
   return jsonObj
 }
 
-const data = readCsv('./Premios2020.csv')
-//console.log(data)
+const data = readCsv('./data/Premios2020.csv')
 
-console.log(process.env.ELASTIC_URL)
 const client = new Client({
   node: process.env.ELASTIC_URL,
   auth: {
     username: process.env.ELASTIC_USERNAME,
     password: process.env.ELASTIC_PASSWORD,
   },
-  tls: {
-    ca: fs.readFileSync('./http_ca.crt'),
-    rejectUnauthorized: false,
-  },
 })
 
-async function search(index, query) {
+async function searchElastic(index, query) {
   const response = await client.search({
     index: index,
     body: {
@@ -48,19 +42,6 @@ async function search(index, query) {
   return response.hits.hits
 }
 
-//async function add() {
-//  const response = await client.index({
-//    index: 'books',
-//    document: {
-//      name: 'Snow Crash',
-//      author: 'Neal Stephenson',
-//      release_date: '1992-06-01',
-//      page_count: 470,
-//    },
-//  })
-//  console.log(response)
-//}
-
 async function addAll(data, index) {
   client
     .bulk({
@@ -70,16 +51,8 @@ async function addAll(data, index) {
     .catch(console.log)
 }
 
-//add()
-//search()
-//  .then((res) => {
-//    //console.log(res)
-//    console.log(res.hits.hits)
-//  })
-//  .catch(console.log)
-
-//addAll(data, 'premios')
-search('premios', 'Last')
+addAll(data, 'premios')
+searchElastic('premios', 'Last')
   .then((res) => {
     console.log(res)
   })
