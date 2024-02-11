@@ -2,3 +2,4 @@ http_ca.crt
 cosign.pub
 .env
 node_modules/
+.next/

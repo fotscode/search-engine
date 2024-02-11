@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: linear-gradient(90deg, #20232a 1px, transparent 1px),
+    linear-gradient(180deg, #20232a 1px, transparent 1px);
+  background-size: 25px 25px;
+  background-color: #0d0f14;
+}
+
+input {
+  width: 15em;
+  padding: 0.5em;
+  font-size: 1.5em;
+  border-radius: 5px;
+  display: inline-table;
+}
+
+.input-glowing {
+  position: relative;
+  overflow: hidden;
+  border-radius: 5px;
+  padding: 0.12em;
+}
+
+.input-glowing:before {
+  content: '';
+  background: linear-gradient(#00DC82, transparent);
+  position: absolute;
+  height: 150%;
+  width: 150%;
+  z-index: -1;
+  left: -25%;
+  animation: animate 4s infinite linear;
+}
+
+
+@keyframes animate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
