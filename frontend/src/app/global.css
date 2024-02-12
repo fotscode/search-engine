@@ -19,22 +19,24 @@ input {
 
 .input-glowing {
   position: relative;
-  overflow: hidden;
+    overflow: hidden;
   border-radius: 5px;
-  padding: 0.12em;
+  padding: 0.15em;
 }
 
 .input-glowing:before {
   content: '';
-  background: linear-gradient(#00DC82, transparent);
+  background-image: conic-gradient(
+    #00dc82 20deg,
+    transparent 120deg
+  );
   position: absolute;
-  height: 150%;
-  width: 150%;
+  height: 25em;
+  width: 25em;
   z-index: -1;
-  left: -25%;
+  top: -9.5em;
   animation: animate 4s infinite linear;
 }
-
 
 @keyframes animate {
   0% {
@@ -44,4 +46,3 @@ input {
     transform: rotate(360deg);
   }
 }
-

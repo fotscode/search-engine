@@ -51,7 +51,7 @@ async function addAll(data, index) {
     .catch(console.log)
 }
 
-addAll(data, 'premios')
+//addAll(data, 'premios')
 searchElastic('premios', 'Last')
   .then((res) => {
     console.log(res)
