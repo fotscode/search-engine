@@ -1,11 +1,10 @@
-import Search from '../components/Search'
+import Header from '../components/Header'
 
 export default function Page() {
   return (
-    <div className="min-h-screen">
-      <Search
-        url={process.env.BACKEND_URL}
-      />
-    </div>
+    <>
+      <Header url={process.env.BACKEND_URL} />
+      <section className='min-h-screen'></section>
+    </>
   )
 }
