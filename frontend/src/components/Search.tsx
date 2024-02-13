@@ -4,50 +4,79 @@ import {
   ModalContent,
   ModalHeader,
   ModalBody,
-  Button,
   useDisclosure,
   Link,
+  Card,
+  CardBody,
+  CardFooter,
+  Chip,
+  Button,
 } from '@nextui-org/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 interface HitsElastic {
   _id: string
   _index: string
   _score: number
-  _source: Premio
+  _source: Movie
 }
 
-interface Premio {
-  Actor: string
-  Age: string
-  Film: string
-  Sex: string
-  Year: string
-  duration: string
-  genre1: string
-  genre2: string
-  nominations: string
-  rating: string
-  release: string
-  synopsis: string
+interface Movie {
+  code: number
+  title: string
+  title_suggest: string
+  genre: string[]
+  director: string
+  actors: string[]
+  description: string
+  year: number
+  runtime: string
+  rating: number
+  votes: number
+  revenue: string
+  metascore: number
+  certificate: string
+  avatar: string
 }
 
 interface Props {
   url: string
 }
 
+interface Facet {
+  field: string
+  key: string
+  doc_count: number
+  active: boolean
+}
+
 export default function Search({ url }: Props) {
-  const { isOpen, onOpen, onOpenChange } = useDisclosure()
+  const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure()
   const [results, setResults] = useState<HitsElastic[]>([])
   const [didYouMean, setDidYouMean] = useState<string>('')
   const [search, setSearch] = useState<string>('')
+  const [facets, setFacets] = useState<Facet[]>([])
+  const [hideFacets, setHideFacets] = useState<boolean>(false)
+
+  useEffect(() => {
+    window.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'k' && !isOpen) {
+        e.preventDefault()
+        onOpen()
+      }
+      if (e.key === 'Escape' && isOpen) {
+        e.preventDefault()
+        onClose()
+      }
+    })
+  })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value)
-    makeSearch(e.target.value)
+    makeSearch(e.target.value, getFilters())
     makeDidYouMean(e.target.value)
   }
 
-  const makeSearch = (search: string) => {
+  const makeSearch = (search: string, filters: string[]) => {
     fetch(`${url}/search`, {
       method: 'POST',
       headers: {
@@ -55,16 +84,37 @@ export default function Search({ url }: Props) {
       },
       body: JSON.stringify({
         text: search,
-        field: 'Film',
+        field: 'title',
+        filters: filters,
       }),
     })
       .then((response) => response.json())
       .then((data) => {
         setResults(data.hits.hits)
+        makeFacets(data.aggregations)
       })
       .catch((error) => {
         console.error('Error:', error)
       })
+  }
+
+  const makeFacets = (aggregations: any) => {
+    let facetsNew = []
+    // for each of agregationss key vlaue
+    Object.keys(aggregations).forEach((agg) => {
+      aggregations[agg].buckets.forEach((bucket: any) => {
+        let active = facets.find(
+          (facet) => facet.key === bucket.key && facet.active,
+        )
+        facetsNew.push({
+          field: agg,
+          key: bucket.key,
+          doc_count: bucket.doc_count,
+          active: active,
+        })
+      })
+    })
+    setFacets(facetsNew)
   }
 
   const makeDidYouMean = (search: string) => {
@@ -75,7 +125,8 @@ export default function Search({ url }: Props) {
       },
       body: JSON.stringify({
         text: search,
-        field: 'Film',
+        field: 'title',
+        filters: [],
       }),
     })
       .then((response) => response.json())
@@ -83,6 +134,7 @@ export default function Search({ url }: Props) {
         setDidYouMean(getDidYouMean(data.suggest.my_suggestion))
       })
   }
+
   const getDidYouMean = (suggest: any): string => {
     let didYouMean = ''
     let errors = 0
@@ -102,29 +154,53 @@ export default function Search({ url }: Props) {
   const handleDidYouMean = () => {
     setSearch(didYouMean)
     setDidYouMean('')
-    makeSearch(didYouMean)
+    makeSearch(didYouMean, getFilters())
     makeDidYouMean(didYouMean)
+  }
+
+  const handleFilter = (facet: Facet) => {
+    facet.active = !facet.active
+    setFacets([...facets])
+    console.log(getFilters())
+    makeSearch(search, getFilters())
+  }
+
+  const getFilters = (): string[] => {
+    return facets
+      .filter((facet) => facet.active)
+      .map((facet) => `${facet.field}:${facet.key}`)
   }
 
   return (
     <>
-      <Button onPress={onOpen}>Open Modal</Button>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} closeButton={<></>}>
+      <div
+        className='bg-white flex w-full p-2 gap-16 rounded-lg items-center justify-between text-left hover:bg-gray-200 hover:cursor-pointer max-w-prose'
+        onClick={onOpen}
+      >
+        <img src='/search.svg' width={16} className='m-1'></img>
+        Search
+        <Chip variant='solid' radius='sm' color='secondary'>
+          ^K
+        </Chip>
+      </div>
+
+      <Modal
+        size={'5xl'}
+        isOpen={isOpen}
+        scrollBehavior='inside'
+        onOpenChange={onOpenChange}
+        closeButton={<></>}
+      >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className='flex flex-col '>
+              <ModalHeader className='flex flex-col'>
                 <div className='flex items-center gap-4'>
                   <input
                     placeholder='Search'
-                    // auto focus
-                    className='w-full p-2 rounded-sm text-lg
-                  appearance-none focus:outline-none focus:ring-0
-
-                  '
+                    className='w-full p-2 rounded-sm text-lg appearance-none focus:outline-none focus:ring-0'
                     onChange={handleChange}
                     value={search}
-                    // make able to close when pressing esc
                     autoFocus={true}
                   />
                   <button
@@ -142,25 +218,100 @@ export default function Search({ url }: Props) {
                     </Link>
                   </p>
                 )}
-              </ModalHeader>
-              <ModalBody>
-                {results.length > 0 ? (
-                  results.map((result) => (
-                    <div key={result._id}>
-                      <p>{result._source.Film}</p>
-                      <p>{result._source.Actor}</p>
+                <div className='flex mt-2 gap-2'>
+                  {facets.length > 0 && !hideFacets && (
+                    <div className='flex flex-wrap gap-2'>
+                      {facets.map((facet) => (
+                        <Chip
+                          key={facet.key}
+                          variant={facet.active ? 'solid' : 'flat'}
+                          color={
+                            facet.field === 'genre' ? 'secondary' : 'primary'
+                          }
+                          radius='sm'
+                          onClick={() => handleFilter(facet)}
+                        >
+                          {facet.key} ({facet.doc_count})
+                        </Chip>
+                      ))}
+                      <Chip
+                        key='clear'
+                        variant='solid'
+                        color='default'
+                        radius='sm'
+                        onClick={() => {
+                          setFacets(
+                            facets.map((facet) => {
+                              facet.active = false
+                              return facet
+                            }),
+                          )
+                          makeSearch(search, [])
+                        }}
+                      >
+                        Clear
+                      </Chip>
                     </div>
-                  ))
-                ) : (
-                  <p
-                    className='
+                  )}
+                  {facets.length > 0 && (
+                    <Chip
+                      key='clear'
+                      variant='solid'
+                      color='default'
+                      radius='sm'
+                      onClick={() => setHideFacets(!hideFacets)}
+                    >
+                      {hideFacets ? 'Show facets' : 'Hide'}
+                    </Chip>
+                  )}
+                </div>
+              </ModalHeader>
+              {results.length > 0 ? (
+                <ModalBody className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3'>
+                  {results.map((result) => (
+                    <Card
+                      key={result._id}
+                      className='h-max md:h-auto grid grid-cols-3 text-left'
+                      isPressable={true}
+                    >
+                      <CardBody className='col-span-1'>
+                        <img
+                          src={result._source.avatar}
+                          className='w-20 h-auto round-sm mx-auto'
+                          // center the image
+                        />
+                      </CardBody>
+                      <CardFooter className='col-span-2'>
+                        <div className='flex flex-col gap-1'>
+                          <p className='text-sm font-bold'>
+                            {result._source.title}
+                          </p>
+                          <p className='text-xs'>{result._source.director}</p>
+                          <p className='text-xs'>
+                            {result._source.genre.join(', ')}
+                          </p>
+                          <p className='text-xs'>{result._source.year}</p>
+                          <Chip
+                            className='text-xs w-fit text-center items-center justify-center p-2 gap-1'
+                            variant='flat'
+                            avatar={<img src='/stars.svg' width={16}></img>}
+                          >
+                            {result._score.toFixed(2)}
+                          </Chip>
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </ModalBody>
+              ) : (
+                <ModalBody
+                  className='
                 text-center p-5
                     '
-                  >
-                    No results...
-                  </p>
-                )}
-              </ModalBody>
+                >
+                  No results...
+                </ModalBody>
+              )}
             </>
           )}
         </ModalContent>
