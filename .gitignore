@@ -1,5 +1,6 @@
 http_ca.crt
 cosign.pub
 .env
+.env.local
 node_modules/
 .next/
