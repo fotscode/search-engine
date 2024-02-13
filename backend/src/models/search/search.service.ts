@@ -8,7 +8,7 @@ export class SearchService {
 
   didYouMean(searchDto: SearchDto) {
     return this.elasticsearchService.search({
-      index: 'premios',
+      index: 'movies',
       suggest: {
         my_suggestion: {
           text: searchDto.text,
@@ -23,12 +23,52 @@ export class SearchService {
 
   search(searchDto: SearchDto) {
     return this.elasticsearchService.search({
-      index: 'premios',
-      query: {
-        match: {
-          [searchDto.field]: searchDto.text,
+      index: 'movies',
+      // aggregate genre and certificate only by searched text query top 10
+      body: {
+        size: 10,
+        query: this.getQueryFiltered(searchDto),
+        aggs: {
+          genre: {
+            terms: {
+              field: 'genre.keyword',
+              size: 10,
+            },
+          },
+          certificate: {
+            terms: {
+              field: 'certificate.keyword',
+              size: 10,
+            },
+          },
         },
       },
     })
+  }
+
+  getQueryFiltered(searchDto: SearchDto) {
+    return {
+      bool: {
+        must: {
+          match: {
+            [searchDto.field]: searchDto.text,
+          },
+        },
+        filter: searchDto.filters.map((filter) => {
+          return {
+            bool: {
+              should: filter.split(',').map((fieldValue) => {
+                const [field, value] = fieldValue.split(':')
+                return {
+                  term: {
+                    [field + '.keyword']: value,
+                  },
+                }
+              }),
+            },
+          }
+        }),
+      },
+    }
   }
 }
